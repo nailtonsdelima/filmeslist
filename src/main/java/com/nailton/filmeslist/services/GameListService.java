@@ -1,5 +1,6 @@
 package com.nailton.filmeslist.services;
 
+import java.util.Iterator;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -7,9 +8,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.nailton.filmeslist.dto.GameListDTO;
-import com.nailton.filmeslist.dto.GameMinDTO;
 import com.nailton.filmeslist.entities.GameList;
+import com.nailton.filmeslist.projections.GameMinProjection;
 import com.nailton.filmeslist.repositories.GameListRepository;
+import com.nailton.filmeslist.repositories.GameRepository;
 
 @Service
 public class GameListService {
@@ -17,10 +19,28 @@ public class GameListService {
 	@Autowired
 	private GameListRepository gameListRepository;
 	
+	@Autowired
+	private GameRepository gameRepository;
+	
 	@Transactional(readOnly = true)
 	public List<GameListDTO> findAll(){
 		List<GameList> result = gameListRepository.findAll();
 		return result.stream().map(x -> new GameListDTO(x)).toList();
+	}
+	
+	@Transactional
+	public void move(Long listId, int sourceIndex, int destinationIndex){
+		List<GameMinProjection> list = gameRepository.searchByList(listId);
+		
+		GameMinProjection obj = list.remove(sourceIndex);
+		list.add(destinationIndex, obj);
+		
+		int min = sourceIndex < destinationIndex ? sourceIndex : destinationIndex;
+		int max = sourceIndex < destinationIndex ? destinationIndex : sourceIndex;
+		
+		for (int i = min; i < max; i++) {
+			gameListRepository.updateBelongingPosition(listId, list.get(i).getId(), i);
+		}
 	}
 
 }
